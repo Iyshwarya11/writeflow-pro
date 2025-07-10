@@ -1,291 +1,244 @@
-# WriteFlow Pro Backend
+# WriteFlow Pro - AI-Powered Writing Assistant
 
-A FastAPI backend for WriteFlow Pro document editor with AI-powered writing assistance using LangChain, Ollama Llama3, and SQLite database.
+A comprehensive document editor with AI-powered writing assistance, real-time collaboration, and advanced analytics.
 
 ## Features
 
-- **AI-Powered Writing Assistance**: Grammar checking, style suggestions, tone analysis using Llama3
-- **Document Management**: CRUD operations with version control
-- **Real-time Analytics**: Readability scores, writing statistics, keyword extraction
-- **User Authentication**: JWT-based authentication with SQLite
-- **Collaborative Editing**: Document sharing and collaboration features
+### 🤖 AI-Powered Writing Assistance
+- **Grammar & Style Checking**: Real-time grammar corrections and style improvements
+- **Tone Analysis**: Analyze and adjust writing tone for different audiences
+- **Readability Scoring**: Get readability metrics and suggestions for improvement
+- **Vocabulary Enhancement**: AI-powered vocabulary suggestions and improvements
 - **Plagiarism Detection**: Basic plagiarism checking capabilities
-- **Vocabulary Enhancement**: AI-powered vocabulary improvement suggestions
+
+### 📝 Advanced Document Management
+- **Rich Text Editor**: Full-featured editor with formatting tools
+- **Auto-Save**: Automatic document saving with version control
+- **Document Organization**: Tags, folders, and search functionality
+- **Collaboration**: Real-time document sharing and collaboration
+- **Export Options**: Multiple export formats (PDF, Word, etc.)
+
+### 📊 Writing Analytics
+- **Writing Statistics**: Word count, reading time, grade level analysis
+- **Progress Tracking**: Writing goals and productivity metrics
+- **Performance Insights**: Detailed analytics on writing patterns
+- **Improvement Suggestions**: Personalized recommendations for better writing
+
+### 🎨 Modern User Experience
+- **Dark/Light Mode**: Customizable theme preferences
+- **Focus Mode**: Distraction-free writing environment
+- **Responsive Design**: Works seamlessly on desktop and mobile
+- **Keyboard Shortcuts**: Efficient workflow with keyboard shortcuts
+- **Voice Input**: Speech-to-text functionality
 
 ## Tech Stack
 
-- **FastAPI**: Modern, fast web framework for building APIs
-- **LangChain**: Framework for developing applications with LLMs
-- **Ollama**: Local LLM runtime for Llama3
-- **SQLite**: Lightweight, file-based database
-- **Pydantic**: Data validation using Python type annotations
-- **SQLAlchemy**: SQL toolkit and ORM
-- **JWT**: JSON Web Tokens for authentication
+### Frontend
+- **Next.js 13+** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first CSS framework
+- **shadcn/ui** - Modern UI component library
+- **Lucide React** - Beautiful icons
 
-## Setup
+### Backend
+- **FastAPI** - Modern Python web framework
+- **MongoDB** - Document database with Motor async driver
+- **JWT Authentication** - Secure user authentication
+- **Groq API** - AI-powered language processing
+- **NLTK & TextStat** - Text analysis and processing
+
+## Quick Start
 
 ### Prerequisites
-
-1. **Python 3.8+**
-2. **Ollama** installed and running locally
-3. **Llama3 model** pulled in Ollama
+- Node.js 18+ and npm
+- Python 3.8+
+- MongoDB (local or cloud)
+- Groq API key (optional, for enhanced AI features)
 
 ### Installation
 
-1. **Clone and navigate to backend directory**:
+1. **Clone the repository**
    ```bash
-   cd backend
+   git clone <repository-url>
+   cd writeflow-pro
    ```
 
-2. **Create virtual environment**:
+2. **Install frontend dependencies**
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   npm install
    ```
 
-3. **Install dependencies**:
+3. **Install backend dependencies**
    ```bash
-   pip install -r requirements.txt
+   npm run install:backend
    ```
 
-4. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   ```
+4. **Set up environment variables**
    
-   Edit `.env` with your configuration:
+   Frontend (.env.local):
    ```env
-   DATABASE_URL=sqlite:///./writeflow.db
-   OLLAMA_BASE_URL=http://localhost:11434
-   SECRET_KEY=your_secret_key_here
-   ```
-
-5. **Set up Ollama and Llama3**:
-   ```bash
-   # Install Ollama (if not already installed)
-   curl -fsSL https://ollama.ai/install.sh | sh
-   
-   # Pull Llama3 model
-   ollama pull llama3
-   
-   # Start Ollama service
-   ollama serve
-   ```
-
-6. **Download NLTK data**:
-   ```python
-   python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords')"
-   ```
-
-### Running the Server
-
-1. **Development mode**:
-   ```bash
-   python run.py
+   NEXT_PUBLIC_API_URL=http://localhost:8000/api
    ```
    
-   Or using uvicorn directly:
-   ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   Backend (backend/.env):
+   ```env
+   MONGODB_URL=mongodb://localhost:27017
+   DATABASE_NAME=writeflow_pro
+   SECRET_KEY=your-secret-key-change-this-in-production
+   GROQ_API_KEY=your-groq-api-key-here
    ```
 
-2. **Production mode**:
+5. **Start the development servers**
    ```bash
-   uvicorn app.main:app --host 0.0.0.0 --port 8000
+   # Start both frontend and backend
+   npm run dev:full
+   
+   # Or start them separately
+   npm run dev          # Frontend only
+   npm run backend      # Backend only
    ```
 
-The API will be available at `http://localhost:8000`
-
-## API Documentation
-
-Once the server is running, you can access:
-
-- **Interactive API docs**: `http://localhost:8000/docs`
-- **ReDoc documentation**: `http://localhost:8000/redoc`
-- **OpenAPI schema**: `http://localhost:8000/openapi.json`
-
-## API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
-- `GET /api/auth/me` - Get current user profile
-- `POST /api/auth/logout` - User logout
-
-### Documents
-- `GET /api/documents/` - List user documents
-- `POST /api/documents/` - Create new document
-- `GET /api/documents/{id}` - Get document by ID
-- `PUT /api/documents/{id}` - Update document
-- `DELETE /api/documents/{id}` - Delete document
-- `POST /api/documents/{id}/duplicate` - Duplicate document
-
-### AI Suggestions
-- `POST /api/ai/suggestions` - Generate AI suggestions
-- `GET /api/ai/suggestions/{document_id}` - Get document suggestions
-- `PUT /api/ai/suggestions/{id}/apply` - Apply suggestion
-- `PUT /api/ai/suggestions/{id}/dismiss` - Dismiss suggestion
-- `POST /api/ai/tone-analysis` - Analyze text tone
-- `POST /api/ai/plagiarism-check` - Check for plagiarism
-- `POST /api/ai/vocabulary-enhancement` - Enhance vocabulary
-
-### Analytics
-- `GET /api/analytics/document/{id}` - Get document analytics
-- `GET /api/analytics/document/{id}/readability` - Get readability analysis
-- `GET /api/analytics/document/{id}/keywords` - Extract keywords
-- `GET /api/analytics/user/stats` - Get user writing statistics
-- `POST /api/analytics/document/{id}/compare` - Compare document versions
-
-## Database Schema
-
-The SQLite database includes the following tables:
-
-### Users Table
-- `id` (String, Primary Key)
-- `email` (String, Unique)
-- `full_name` (String)
-- `hashed_password` (String)
-- `created_at`, `updated_at` (DateTime)
-- `is_active` (Boolean)
-- `subscription_tier` (String)
-- `preferences` (JSON)
-
-### Documents Table
-- `id` (String, Primary Key)
-- `title` (String)
-- `content` (Text)
-- `user_id` (String)
-- `created_at`, `updated_at` (DateTime)
-- `word_count`, `reading_time` (Integer)
-- `tags` (JSON)
-- `language`, `writing_goal`, `status` (String)
-- `is_public` (Boolean)
-- `version` (Integer)
-- `collaborators` (JSON)
-
-### Suggestions Table
-- `id` (String, Primary Key)
-- `document_id` (String)
-- `type`, `text`, `suggestion`, `explanation` (String)
-- `position` (JSON)
-- `severity` (String)
-- `confidence` (Float)
-- `created_at` (DateTime)
-- `is_applied`, `is_dismissed` (Boolean)
-
-## Configuration
-
-### Environment Variables
-
-- `DATABASE_URL`: SQLite database file path (default: sqlite:///./writeflow.db)
-- `OLLAMA_BASE_URL`: Ollama server URL (default: http://localhost:11434)
-- `SECRET_KEY`: JWT secret key
-- `ALGORITHM`: JWT algorithm (default: HS256)
-- `ACCESS_TOKEN_EXPIRE_MINUTES`: Token expiration time (default: 30)
-
-### Ollama Configuration
-
-The service automatically:
-1. Connects to Ollama at startup
-2. Checks if Llama3 model is available
-3. Pulls the model if not present
-4. Initializes the LangChain integration
+6. **Open your browser**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
 
 ## Development
 
 ### Project Structure
 ```
-backend/
-├── app/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI application
-│   ├── database.py          # Database configuration
-│   ├── models/              # Pydantic models
-│   ├── routers/             # API route handlers
-│   └── services/            # Business logic services
-├── requirements.txt         # Python dependencies
-├── .env.example            # Environment variables template
-├── run.py                  # Server runner
+writeflow-pro/
+├── app/                    # Next.js app directory
+│   ├── globals.css        # Global styles
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx          # Main application
+│   └── not-found.tsx     # 404 page
+├── components/            # React components
+│   └── ui/               # shadcn/ui components
+├── lib/                  # Utility libraries
+│   ├── api.ts           # API client
+│   └── utils.ts         # Helper functions
+├── backend/              # FastAPI backend
+│   ├── app/             # Application code
+│   │   ├── models/      # Pydantic models
+│   │   ├── routers/     # API routes
+│   │   ├── services/    # Business logic
+│   │   └── main.py      # FastAPI app
+│   ├── requirements.txt # Python dependencies
+│   └── run.py          # Server runner
 └── README.md
 ```
 
-### Adding New Features
+### API Endpoints
 
-1. **Create Pydantic models** in `app/models/`
-2. **Add database models** in `app/database.py`
-3. **Implement business logic** in `app/services/`
-4. **Create API routes** in `app/routers/`
-5. **Update main.py** to include new routers
+#### Authentication
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user
+- `POST /api/auth/logout` - User logout
 
-### Testing
+#### Documents
+- `GET /api/documents/` - List documents
+- `POST /api/documents/` - Create document
+- `GET /api/documents/{id}` - Get document
+- `PUT /api/documents/{id}` - Update document
+- `DELETE /api/documents/{id}` - Delete document
 
-```bash
-# Install test dependencies
-pip install pytest pytest-asyncio httpx
+#### AI Features
+- `POST /api/ai/suggestions` - Generate AI suggestions
+- `POST /api/ai/tone-analysis` - Analyze text tone
+- `POST /api/ai/plagiarism-check` - Check plagiarism
+- `GET /api/analytics/document/{id}` - Document analytics
 
-# Run tests
-pytest
-```
+### Environment Variables
+
+#### Frontend
+- `NEXT_PUBLIC_API_URL` - Backend API URL
+
+#### Backend
+- `MONGODB_URL` - MongoDB connection string
+- `DATABASE_NAME` - Database name
+- `SECRET_KEY` - JWT secret key
+- `GROQ_API_KEY` - Groq API key for enhanced AI features
+- `CORS_ORIGINS` - Allowed CORS origins
 
 ## Deployment
 
+### Frontend (Vercel/Netlify)
+1. Build the project: `npm run build`
+2. Deploy the `out` directory (static export)
+3. Set environment variables in deployment platform
+
+### Backend (Railway/Heroku/DigitalOcean)
+1. Set up MongoDB database
+2. Configure environment variables
+3. Deploy using Docker or direct Python deployment
+
 ### Docker Deployment
-
 ```dockerfile
-FROM python:3.9-slim
-
+# Frontend Dockerfile
+FROM node:18-alpine
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
+COPY package*.json ./
+RUN npm install
 COPY . .
-EXPOSE 8000
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
 
+# Backend Dockerfile
+FROM python:3.9-slim
+WORKDIR /app
+COPY backend/requirements.txt .
+RUN pip install -r requirements.txt
+COPY backend/ .
+EXPOSE 8000
 CMD ["python", "run.py"]
 ```
 
-### Environment Setup
+## Features in Detail
 
-Ensure all environment variables are properly set in production:
-- Use strong `SECRET_KEY`
-- Configure proper CORS origins
-- Set up SSL/TLS termination
-- Configure logging levels
+### AI Writing Assistant
+- **Real-time Suggestions**: Get grammar, style, and clarity suggestions as you type
+- **Context-Aware**: Suggestions adapt to your writing goal (professional, academic, creative, etc.)
+- **Multiple Languages**: Support for multiple languages and locales
+- **Confidence Scoring**: Each suggestion includes a confidence score
 
-## Troubleshooting
+### Document Management
+- **Version Control**: Track document versions and changes
+- **Collaboration**: Share documents with team members
+- **Organization**: Use tags and folders to organize documents
+- **Search**: Full-text search across all documents
 
-### Common Issues
-
-1. **Ollama Connection Failed**:
-   - Ensure Ollama is running: `ollama serve`
-   - Check if Llama3 model is available: `ollama list`
-   - Verify OLLAMA_BASE_URL in environment
-
-2. **Database Issues**:
-   - Check if SQLite file is writable
-   - Ensure database directory exists
-   - Verify DATABASE_URL format
-
-3. **NLTK Data Missing**:
-   ```python
-   import nltk
-   nltk.download('punkt')
-   nltk.download('stopwords')
-   ```
-
-4. **Permission Errors**:
-   - Check file permissions for database
-   - Verify user has write access to directory
-   - Ensure JWT token is valid
+### Analytics Dashboard
+- **Writing Metrics**: Track words written, time spent, and productivity
+- **Readability Analysis**: Flesch-Kincaid, SMOG, and other readability scores
+- **Tone Analysis**: Understand the emotional tone of your writing
+- **Progress Tracking**: Set and track writing goals
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+For support, email support@writeflowpro.com or join our Discord community.
+
+## Roadmap
+
+- [ ] Real-time collaborative editing
+- [ ] Advanced plagiarism detection
+- [ ] Integration with Google Docs/Word
+- [ ] Mobile app development
+- [ ] Advanced AI models integration
+- [ ] Team workspace features
+- [ ] Advanced export options
+- [ ] Plugin system for extensions

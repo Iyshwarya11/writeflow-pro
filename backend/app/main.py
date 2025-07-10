@@ -5,6 +5,7 @@ import logging
 
 from app.database import connect_to_mongo, close_mongo_connection
 from app.routers import auth, documents, suggestions, analytics, comments
+from app.config import settings
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
