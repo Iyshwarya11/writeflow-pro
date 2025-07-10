@@ -199,16 +199,20 @@ export default function DocumentEditor() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const apiClient = getApiClientInstance();
-        if (apiClient.isAuthenticated()) {
-          const userData = await apiClient.getCurrentUser();
-          setUser(userData);
-          setIsAuthenticated(true);
-          await loadDocuments();
+        if (typeof window !== 'undefined') {
+          const apiClient = getApiClientInstance();
+          if (apiClient.isAuthenticated()) {
+            const userData = await apiClient.getCurrentUser();
+            setUser(userData);
+            setIsAuthenticated(true);
+            await loadDocuments();
+          }
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        getApiClientInstance().clearToken();
+        if (typeof window !== 'undefined') {
+          getApiClientInstance().clearToken();
+        }
       }
     };
 
@@ -217,6 +221,8 @@ export default function DocumentEditor() {
 
   // Load documents
   const loadDocuments = async () => {
+    if (!isAuthenticated) return;
+    
     try {
       const docs = await getApiClientInstance().getDocuments();
       setDocuments(docs);
@@ -264,7 +270,9 @@ export default function DocumentEditor() {
 
   const handleLogout = async () => {
     try {
-      await getApiClientInstance().logout();
+      if (typeof window !== 'undefined') {
+        await getApiClientInstance().logout();
+      }
       setIsAuthenticated(false);
       setUser(null);
       setDocuments([]);
@@ -277,7 +285,7 @@ export default function DocumentEditor() {
 
   // Generate suggestions with debouncing
   useEffect(() => {
-    if (!isAuthenticated || !activeDocument) return;
+    if (!isAuthenticated || !activeDocument || typeof window === 'undefined') return;
 
     const generateSuggestions = async () => {
       try {
@@ -301,7 +309,7 @@ export default function DocumentEditor() {
 
   // Auto-save functionality
   useEffect(() => {
-    if (!isAuthenticated || !activeDocument || content === activeDocument.content) return;
+    if (!isAuthenticated || !activeDocument || content === activeDocument.content || typeof window === 'undefined') return;
 
     const autoSave = setTimeout(async () => {
       setIsAutoSaving(true);
@@ -340,6 +348,8 @@ export default function DocumentEditor() {
 
   // Document handlers
   const createNewDocument = async () => {
+    if (!isAuthenticated) return;
+    
     try {
       const newDoc = await getApiClientInstance().createDocument({
         title: 'Untitled Document',
@@ -361,6 +371,8 @@ export default function DocumentEditor() {
   };
 
   const applySuggestion = async (suggestion: Suggestion) => {
+    if (!isAuthenticated) return;
+    
     const newContent = content.slice(0, suggestion.position.start) + 
                       suggestion.suggestion + 
                       content.slice(suggestion.position.end);
@@ -375,6 +387,8 @@ export default function DocumentEditor() {
   };
 
   const dismissSuggestion = async (suggestionId: string) => {
+    if (!isAuthenticated) return;
+    
     try {
       await getApiClientInstance().dismissSuggestion(suggestionId);
       setSuggestions(prev => prev.filter(s => s.id !== suggestionId));
@@ -610,7 +624,7 @@ export default function DocumentEditor() {
                                       <Badge key={tag} variant="secondary" className="text-xs">
                                         {tag}
                                       </Badge>
-                                    ))}
+                                    {new Date(doc.last_modified || doc.updated_at).toLocaleDateString()}
                                   </div>
                                 )}
                               </div>
@@ -968,6 +982,12 @@ export default function DocumentEditor() {
                               </div>
                             </div>
                           ))}
+                          {filteredDocuments.length === 0 && (
+                            <div className="text-center text-muted-foreground py-8">
+                              <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                              <p>No documents found</p>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                       

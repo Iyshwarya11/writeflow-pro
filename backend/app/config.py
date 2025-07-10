@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     groq_api_key: Optional[str] = None
+    cors_origins: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "https://localhost:3000"]
     
     class Config:
         env_file = ".env"

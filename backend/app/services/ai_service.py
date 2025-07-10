@@ -1,7 +1,6 @@
 import re
 import nltk
 import textstat
-from groq import Groq
 from typing import List, Dict, Any, Optional
 from app.config import settings
 from app.models.suggestion import Suggestion, SuggestionCreate, SuggestionPosition
@@ -9,23 +8,36 @@ from app.models.analytics import ToneAnalysis, ReadabilityAnalysis, WritingStats
 from datetime import datetime
 import logging
 
+# Optional Groq import
+try:
+    from groq import Groq
+    GROQ_AVAILABLE = True
+except ImportError:
+    GROQ_AVAILABLE = False
+    logger.warning("Groq package not available. AI suggestions will use basic algorithms only.")
 logger = logging.getLogger(__name__)
 
 # Download required NLTK data
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
-    nltk.download('punkt')
+    try:
+        nltk.download('punkt')
+    except Exception as e:
+        logger.warning(f"Failed to download NLTK punkt: {e}")
 
 try:
     nltk.data.find('corpora/stopwords')
 except LookupError:
-    nltk.download('stopwords')
+    try:
+        nltk.download('stopwords')
+    except Exception as e:
+        logger.warning(f"Failed to download NLTK stopwords: {e}")
 
 class AIService:
     def __init__(self):
         self.groq_client = None
-        if settings.groq_api_key:
+        if GROQ_AVAILABLE and settings.groq_api_key:
             try:
                 self.groq_client = Groq(api_key=settings.groq_api_key)
                 logger.info("Groq client initialized successfully")
