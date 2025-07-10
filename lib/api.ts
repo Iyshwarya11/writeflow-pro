@@ -335,7 +335,3 @@ export function getApiClientInstance(): APIClient {
   
   return apiClientInstance;
 }
-
-// Export singleton instance for backward compatibility (but only in browser)
-export const apiClient = typeof window !== 'undefined' ? getApiClientInstance() : null;
-export default typeof window !== 'undefined' ? getApiClientInstance() : null;
