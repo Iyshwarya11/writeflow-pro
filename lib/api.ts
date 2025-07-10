@@ -320,6 +320,22 @@ class APIClient {
   }
 }
 
-// Export singleton instance
-export const apiClient = new APIClient(API_BASE_URL);
-export default apiClient;
+// Singleton instance
+let apiClientInstance: APIClient | null = null;
+
+// Export function to get singleton instance
+export function getApiClientInstance(): APIClient {
+  if (!apiClientInstance && typeof window !== 'undefined') {
+    apiClientInstance = new APIClient(API_BASE_URL);
+  }
+  
+  if (!apiClientInstance) {
+    throw new Error('API client can only be used in browser environment');
+  }
+  
+  return apiClientInstance;
+}
+
+// Export singleton instance for backward compatibility (but only in browser)
+export const apiClient = typeof window !== 'undefined' ? getApiClientInstance() : null;
+export default typeof window !== 'undefined' ? getApiClientInstance() : null;

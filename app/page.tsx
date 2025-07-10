@@ -91,7 +91,7 @@ import {
   LogIn,
   UserPlus
 } from 'lucide-react';
-import apiClient from '@/lib/api';
+import { getApiClientInstance } from '@/lib/api';
 
 interface Document {
   id: string;
@@ -198,6 +198,7 @@ export default function DocumentEditor() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        const apiClient = getApiClientInstance();
         if (apiClient.isAuthenticated()) {
           const userData = await apiClient.getCurrentUser();
           setUser(userData);
@@ -206,7 +207,7 @@ export default function DocumentEditor() {
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        apiClient.clearToken();
+        getApiClientInstance().clearToken();
       }
     };
 
@@ -216,7 +217,7 @@ export default function DocumentEditor() {
   // Load documents
   const loadDocuments = async () => {
     try {
-      const docs = await apiClient.getDocuments();
+      const docs = await getApiClientInstance().getDocuments();
       setDocuments(docs);
       if (docs.length > 0 && !activeDocument) {
         setActiveDocument(docs[0]);
@@ -231,6 +232,7 @@ export default function DocumentEditor() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const apiClient = getApiClientInstance();
       if (authMode === 'login') {
         await apiClient.login({
           username: authForm.email,
@@ -261,7 +263,7 @@ export default function DocumentEditor() {
 
   const handleLogout = async () => {
     try {
-      await apiClient.logout();
+      await getApiClientInstance().logout();
       setIsAuthenticated(false);
       setUser(null);
       setDocuments([]);
@@ -279,7 +281,7 @@ export default function DocumentEditor() {
     const generateSuggestions = async () => {
       try {
         if (content.trim().length > 10) {
-          const newSuggestions = await apiClient.generateSuggestions({
+          const newSuggestions = await getApiClientInstance().generateSuggestions({
             document_id: activeDocument.id,
             content,
             writing_goal: writingGoal,
@@ -303,7 +305,7 @@ export default function DocumentEditor() {
     const autoSave = setTimeout(async () => {
       setIsAutoSaving(true);
       try {
-        const updatedDoc = await apiClient.updateDocument(activeDocument.id, {
+        const updatedDoc = await getApiClientInstance().updateDocument(activeDocument.id, {
           content,
           word_count: wordCount
         });
@@ -338,7 +340,7 @@ export default function DocumentEditor() {
   // Document handlers
   const createNewDocument = async () => {
     try {
-      const newDoc = await apiClient.createDocument({
+      const newDoc = await getApiClientInstance().createDocument({
         title: 'Untitled Document',
         content: '',
         tags: [],
@@ -364,7 +366,7 @@ export default function DocumentEditor() {
     setContent(newContent);
     
     try {
-      await apiClient.applySuggestion(suggestion.id);
+      await getApiClientInstance().applySuggestion(suggestion.id);
       setSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
     } catch (error) {
       console.error('Failed to apply suggestion:', error);
@@ -373,7 +375,7 @@ export default function DocumentEditor() {
 
   const dismissSuggestion = async (suggestionId: string) => {
     try {
-      await apiClient.dismissSuggestion(suggestionId);
+      await getApiClientInstance().dismissSuggestion(suggestionId);
       setSuggestions(prev => prev.filter(s => s.id !== suggestionId));
     } catch (error) {
       console.error('Failed to dismiss suggestion:', error);
