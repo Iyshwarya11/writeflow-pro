@@ -2,7 +2,6 @@ import re
 import nltk
 import textstat
 from groq import Groq
-from groq import Groq
 from typing import List, Dict, Any, Optional
 from app.config import settings
 from app.models.suggestion import Suggestion, SuggestionCreate, SuggestionPosition
@@ -44,24 +43,21 @@ class AIService:
         """Generate AI-powered writing suggestions"""
         suggestions = []
         
-        # Grammar suggestions
+        # Basic suggestions (always available)
         grammar_suggestions = self._check_grammar(content, document_id, user_id)
         suggestions.extend(grammar_suggestions)
         
-        # Style suggestions
         style_suggestions = self._check_style(content, document_id, user_id, writing_goal)
         suggestions.extend(style_suggestions)
         
-        # Clarity suggestions
         clarity_suggestions = self._check_clarity(content, document_id, user_id)
         suggestions.extend(clarity_suggestions)
         
-        # Vocabulary suggestions
         vocab_suggestions = self._check_vocabulary(content, document_id, user_id)
         suggestions.extend(vocab_suggestions)
         
         # Use Groq for advanced suggestions if available
-        if self.groq_client:
+        if self.groq_client and content.strip():
             try:
                 ai_suggestions = await self._get_groq_suggestions(
                     content, document_id, user_id, writing_goal
@@ -105,7 +101,7 @@ class AIService:
                 )
                 suggestions.append(suggestion)
         
-        return suggestions
+        return suggestions[:5]  # Limit grammar suggestions
     
     def _check_style(self, content: str, document_id: str, user_id: str, writing_goal: str) -> List[Suggestion]:
         """Style checking based on writing goal"""
@@ -137,7 +133,7 @@ class AIService:
                 )
                 suggestions.append(suggestion)
         
-        return suggestions[:5]  # Limit style suggestions
+        return suggestions[:3]  # Limit style suggestions
     
     def _check_clarity(self, content: str, document_id: str, user_id: str) -> List[Suggestion]:
         """Clarity checking"""
@@ -204,7 +200,7 @@ class AIService:
                 )
                 suggestions.append(suggestion)
         
-        return suggestions[:5]  # Limit vocabulary suggestions
+        return suggestions[:3]  # Limit vocabulary suggestions
     
     async def _get_groq_suggestions(
         self, 
@@ -219,34 +215,34 @@ class AIService:
         
         try:
             # Limit content length for API efficiency
-            content_preview = content[:2000] if len(content) > 2000 else content
+            content_preview = content[:1500] if len(content) > 1500 else content
             
             prompt = f"""
-            You are an expert writing assistant. Analyze the following text for writing improvements based on the goal: {writing_goal}.
-            
-            Provide specific, actionable suggestions in these categories:
-            1. Grammar errors and corrections
-            2. Style improvements for {writing_goal} writing
-            3. Clarity and readability enhancements
-            4. Tone adjustments
-            5. Word choice and vocabulary improvements
-            
-            Text to analyze:
-            "{content_preview}"
-            
-            Format each suggestion as:
-            - Type: [grammar/style/clarity/tone/vocabulary]
-            - Issue: [specific text with issue]
-            - Suggestion: [specific improvement]
-            - Explanation: [why this improves the text]
-            
-            Provide up to 5 most important suggestions.
-            """
+You are an expert writing assistant. Analyze the following text for writing improvements based on the goal: {writing_goal}.
+
+Provide specific, actionable suggestions in these categories:
+1. Grammar errors and corrections
+2. Style improvements for {writing_goal} writing
+3. Clarity and readability enhancements
+4. Tone adjustments
+5. Word choice and vocabulary improvements
+
+Text to analyze:
+"{content_preview}"
+
+Format each suggestion as:
+- Type: [grammar/style/clarity/tone/vocabulary]
+- Issue: [specific text with issue]
+- Suggestion: [specific improvement]
+- Explanation: [why this improves the text]
+
+Provide up to 3 most important suggestions.
+"""
             
             response = self.groq_client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
-                model="llama3-8b-8192",  # or "mixtral-8x7b-32768" for better results
-                max_tokens=1000,
+                model="llama3-8b-8192",
+                max_tokens=800,
                 temperature=0.2
             )
             
@@ -273,7 +269,7 @@ class AIService:
             for line in lines:
                 line = line.strip()
                 if line.startswith('- Type:'):
-                    if current_suggestion:
+                    if current_suggestion and len(current_suggestion) >= 4:
                         # Process previous suggestion
                         suggestion = self._create_suggestion_from_parsed(
                             current_suggestion, document_id, user_id, content
@@ -290,7 +286,7 @@ class AIService:
                     current_suggestion['explanation'] = line.replace('- Explanation:', '').strip()
             
             # Process last suggestion
-            if current_suggestion:
+            if current_suggestion and len(current_suggestion) >= 4:
                 suggestion = self._create_suggestion_from_parsed(
                     current_suggestion, document_id, user_id, content
                 )
@@ -366,29 +362,6 @@ class AIService:
         except Exception as e:
             logger.error(f"Error creating suggestion from parsed data: {e}")
             return None
-            
-            # Create a general AI suggestion
-            suggestion = Suggestion(
-                id=f"ai_general_{hash(content[:100])}",
-                document_id=document_id,
-                user_id=user_id,
-                type="style",
-                text=content[:100] + "..." if len(content) > 100 else content,
-                suggestion="AI-powered improvement available",
-                explanation=ai_text[:200] + "..." if len(ai_text) > 200 else ai_text,
-                position=SuggestionPosition(start=0, end=min(100, len(content))),
-                severity="info",
-                confidence=85.0,
-                is_applied=False,
-                is_dismissed=False,
-                created_at=datetime.utcnow()
-            )
-            
-            return [suggestion]
-            
-        except Exception as e:
-            logger.error(f"Groq API error: {e}")
-            return []
     
     def analyze_tone(self, content: str) -> ToneAnalysis:
         """Analyze the tone of the text"""

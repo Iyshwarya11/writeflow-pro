@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect, useRef } from 'react';
-import { apiClient, type Document as APIDocument, type Suggestion as APISuggestion, type Comment as APIComment } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -12,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   FileText, 
   Save, 
@@ -88,39 +88,28 @@ import {
   Cloud,
   Wifi,
   WifiOff,
-  Menu,
-  X,
-  Home,
-  User,
-  CreditCard,
-  HelpCircle,
-  LogOut
+  LogIn,
+  UserPlus
 } from 'lucide-react';
+import apiClient from '@/lib/api';
 
-interface Document extends Omit<APIDocument, 'last_modified'> {
-  lastModified: Date;
-}
-
-interface OriginalDocument {
+interface Document {
   id: string;
   title: string;
   content: string;
-  lastModified: Date;
-  wordCount: number;
+  last_modified: string;
+  word_count: number;
   shared: boolean;
   starred: boolean;
   tags: string[];
   language: string;
-  readingTime: number;
+  reading_time: number;
   collaborators: string[];
   version: number;
-  isPublic: boolean;
+  is_public: boolean;
 }
 
-interface Suggestion extends APISuggestion {
-}
-
-interface OriginalSuggestion {
+interface Suggestion {
   id: string;
   type: 'grammar' | 'style' | 'clarity' | 'tone' | 'plagiarism' | 'vocabulary';
   text: string;
@@ -131,15 +120,11 @@ interface OriginalSuggestion {
   confidence: number;
 }
 
-interface Comment extends Omit<APIComment, 'timestamp'> {
-  timestamp: Date;
-}
-
-interface OriginalComment {
+interface Comment {
   id: string;
   text: string;
   author: string;
-  timestamp: Date;
+  timestamp: string;
   position: { start: number; end: number };
   resolved: boolean;
 }
@@ -151,17 +136,30 @@ interface WritingGoal {
   deadline?: Date;
 }
 
-export default function GrammarlyClone() {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+interface User {
+  id: string;
+  email: string;
+  full_name: string;
+}
+
+export default function DocumentEditor() {
+  // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
-  const [registerForm, setRegisterForm] = useState({ email: '', full_name: '', password: '' });
-  const [showRegister, setShowRegister] = useState(false);
-  
+  const [user, setUser] = useState<User | null>(null);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authForm, setAuthForm] = useState({
+    email: '',
+    password: '',
+    full_name: ''
+  });
+
+  // Document state
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [activeDocument, setActiveDocument] = useState<Document | null>(null);
   const [content, setContent] = useState('');
+
+  // UI state
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(true);
@@ -178,8 +176,6 @@ export default function GrammarlyClone() {
   const [zoomLevel, setZoomLevel] = useState(100);
   const [darkMode, setDarkMode] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
-  const [clientDates, setClientDates] = useState<Record<string, string>>({});
-  const [mounted, setMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true);
@@ -201,19 +197,17 @@ export default function GrammarlyClone() {
   // Check authentication on mount
   useEffect(() => {
     const checkAuth = async () => {
-      if (apiClient.isAuthenticated()) {
-        try {
+      try {
+        if (apiClient.isAuthenticated()) {
           const userData = await apiClient.getCurrentUser();
           setUser(userData);
           setIsAuthenticated(true);
           await loadDocuments();
-        } catch (error) {
-          console.error('Auth check failed:', error);
-          apiClient.clearToken();
-          setIsAuthenticated(false);
         }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        apiClient.clearToken();
       }
-      setIsLoading(false);
     };
 
     checkAuth();
@@ -223,164 +217,109 @@ export default function GrammarlyClone() {
   const loadDocuments = async () => {
     try {
       const docs = await apiClient.getDocuments();
-      const formattedDocs = docs.map(doc => ({
-        ...doc,
-        lastModified: new Date(doc.last_modified)
-      }));
-      setDocuments(formattedDocs);
-      
-      if (formattedDocs.length > 0 && !activeDocument) {
-        setActiveDocument(formattedDocs[0]);
-        setContent(formattedDocs[0].content);
+      setDocuments(docs);
+      if (docs.length > 0 && !activeDocument) {
+        setActiveDocument(docs[0]);
+        setContent(docs[0].content);
       }
     } catch (error) {
       console.error('Failed to load documents:', error);
     }
   };
 
-  // Load comments for active document
-  useEffect(() => {
-    const loadComments = async () => {
-      if (activeDocument) {
-        try {
-          const apiComments = await apiClient.getDocumentComments(activeDocument.id);
-          const formattedComments = apiComments.map(comment => ({
-            ...comment,
-            timestamp: new Date(comment.timestamp)
-          }));
-          setComments(formattedComments);
-        } catch (error) {
-          console.error('Failed to load comments:', error);
-        }
-      }
-    };
-
-    if (activeDocument && isAuthenticated) {
-      loadComments();
-    }
-  }, [activeDocument, isAuthenticated]);
-
-  // Generate suggestions when content changes
-  useEffect(() => {
-    const generateSuggestions = async () => {
-      if (activeDocument && content.trim().length > 0 && isAuthenticated) {
-        try {
-          const apiSuggestions = await apiClient.generateSuggestions({
-            document_id: activeDocument.id,
-            content,
-            writing_goal: writingGoal,
-            language: selectedLanguage
-          });
-          setSuggestions(apiSuggestions);
-        } catch (error) {
-          console.error('Failed to generate suggestions:', error);
-        }
+  // Authentication handlers
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (authMode === 'login') {
+        await apiClient.login({
+          username: authForm.email,
+          password: authForm.password
+        });
       } else {
-        setSuggestions([]);
+        await apiClient.register({
+          email: authForm.email,
+          password: authForm.password,
+          full_name: authForm.full_name
+        });
+        await apiClient.login({
+          username: authForm.email,
+          password: authForm.password
+        });
       }
-    };
-
-    const timer = setTimeout(generateSuggestions, 1000);
-    return () => clearTimeout(timer);
-  }, [content, writingGoal, selectedLanguage, activeDocument, isAuthenticated]);
-
-  useEffect(() => {
-    if (activeDocument) {
-      setContent(activeDocument.content);
-    }
-  }, [activeDocument]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const map: Record<string, string> = {};
-    documents.forEach((doc) => {
-      map[doc.id] = new Date(doc.lastModified).toLocaleDateString();
-    });
-    setClientDates(map);
-  }, [documents]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const theme = localStorage.getItem('theme');
-      if (theme === 'dark') {
-        setDarkMode(true);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const focus = localStorage.getItem('focusMode');
-      if (focus === 'true') {
-        setFocusMode(true);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('theme', darkMode ? 'dark' : 'light');
-    }
-  }, [darkMode]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('focusMode', focusMode.toString());
-    }
-  }, [focusMode]);
-
-  // Handle login
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await apiClient.login({ username: loginForm.email, password: loginForm.password });
+      
       const userData = await apiClient.getCurrentUser();
       setUser(userData);
       setIsAuthenticated(true);
+      setShowAuthDialog(false);
       await loadDocuments();
-      setLoginForm({ email: '', password: '' });
     } catch (error) {
-      console.error('Login failed:', error);
-      alert('Login failed. Please check your credentials.');
+      console.error('Authentication failed:', error);
+      alert('Authentication failed. Please try again.');
     }
   };
 
-  // Handle register
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await apiClient.register(registerForm);
-      await apiClient.login({ username: registerForm.email, password: registerForm.password });
-      const userData = await apiClient.getCurrentUser();
-      setUser(userData);
-      setIsAuthenticated(true);
-      await loadDocuments();
-      setRegisterForm({ email: '', full_name: '', password: '' });
-      setShowRegister(false);
-    } catch (error) {
-      console.error('Registration failed:', error);
-      alert('Registration failed. Please try again.');
-    }
-  };
-
-  // Handle logout
   const handleLogout = async () => {
     try {
       await apiClient.logout();
-      setUser(null);
       setIsAuthenticated(false);
+      setUser(null);
       setDocuments([]);
       setActiveDocument(null);
       setContent('');
-      setSuggestions([]);
-      setComments([]);
     } catch (error) {
       console.error('Logout failed:', error);
     }
   };
+
+  // Generate suggestions with debouncing
+  useEffect(() => {
+    if (!isAuthenticated || !activeDocument) return;
+
+    const generateSuggestions = async () => {
+      try {
+        if (content.trim().length > 10) {
+          const newSuggestions = await apiClient.generateSuggestions({
+            document_id: activeDocument.id,
+            content,
+            writing_goal: writingGoal,
+            language: selectedLanguage,
+          });
+          setSuggestions(newSuggestions);
+        }
+      } catch (error) {
+        console.error('Failed to generate suggestions:', error);
+      }
+    };
+
+    const debounceTimer = setTimeout(generateSuggestions, 2000);
+    return () => clearTimeout(debounceTimer);
+  }, [content, writingGoal, selectedLanguage, activeDocument, isAuthenticated]);
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (!isAuthenticated || !activeDocument || content === activeDocument.content) return;
+
+    const autoSave = setTimeout(async () => {
+      setIsAutoSaving(true);
+      try {
+        const updatedDoc = await apiClient.updateDocument(activeDocument.id, {
+          content,
+          word_count: wordCount
+        });
+        setActiveDocument(updatedDoc);
+        setDocuments(prev => prev.map(doc => 
+          doc.id === activeDocument.id ? updatedDoc : doc
+        ));
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      } finally {
+        setIsAutoSaving(false);
+      }
+    }, 3000);
+
+    return () => clearTimeout(autoSave);
+  }, [content, activeDocument, wordCount, isAuthenticated]);
 
   // Update analytics
   useEffect(() => {
@@ -391,66 +330,41 @@ export default function GrammarlyClone() {
     const avgWordsPerSentence = words.length / (content.split(/[.!?]+/).length - 1 || 1);
     setGradeLevel(Math.min(Math.max(Math.floor(avgWordsPerSentence * 0.4 + 6), 6), 16));
     
-    // Update writing goals
     setWritingGoals(prev => prev.map(goal => 
       goal.type === 'word_count' ? { ...goal, current: words.length } : goal
     ));
   }, [content]);
 
-  // Auto-save simulation
-  useEffect(() => {
-    const autoSave = setTimeout(async () => {
-      if (activeDocument && content !== activeDocument.content && isAuthenticated) {
-        setIsAutoSaving(true);
-        try {
-          const updatedDoc = await apiClient.updateDocument(activeDocument.id, { content });
-          const formattedDoc = {
-            ...updatedDoc,
-            lastModified: new Date(updatedDoc.last_modified)
-          };
-          
-          setDocuments(prev => prev.map(doc => 
-            doc.id === activeDocument.id ? formattedDoc : doc
-          ));
-          setActiveDocument(formattedDoc);
-        } catch (error) {
-          console.error('Auto-save failed:', error);
-        } finally {
-          setIsAutoSaving(false);
-        }
-      }
-    }, 2000);
-
-    return () => clearTimeout(autoSave);
-  }, [content, activeDocument, wordCount, isAuthenticated]);
-
-  // Online status detection
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    
-    if (typeof window !== 'undefined') {
-      window.addEventListener('online', handleOnline);
-      window.addEventListener('offline', handleOffline);
-      
-      return () => {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-      };
+  // Document handlers
+  const createNewDocument = async () => {
+    try {
+      const newDoc = await apiClient.createDocument({
+        title: 'Untitled Document',
+        content: '',
+        tags: [],
+        language: selectedLanguage,
+        writing_goal: writingGoal
+      });
+      setDocuments(prev => [newDoc, ...prev]);
+      setActiveDocument(newDoc);
+      setContent('');
+    } catch (error) {
+      console.error('Failed to create document:', error);
     }
-  }, []);
+  };
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
   };
 
   const applySuggestion = async (suggestion: Suggestion) => {
+    const newContent = content.slice(0, suggestion.position.start) + 
+                      suggestion.suggestion + 
+                      content.slice(suggestion.position.end);
+    setContent(newContent);
+    
     try {
       await apiClient.applySuggestion(suggestion.id);
-      const newContent = content.slice(0, suggestion.position.start) + 
-                        suggestion.suggestion + 
-                        content.slice(suggestion.position.end);
-      setContent(newContent);
       setSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
     } catch (error) {
       console.error('Failed to apply suggestion:', error);
@@ -463,113 +377,6 @@ export default function GrammarlyClone() {
       setSuggestions(prev => prev.filter(s => s.id !== suggestionId));
     } catch (error) {
       console.error('Failed to dismiss suggestion:', error);
-    }
-  };
-
-  const addComment = async (text: string, position: { start: number; end: number }) => {
-    if (!activeDocument) return;
-    
-    try {
-      const apiComment = await apiClient.createComment({
-        document_id: activeDocument.id,
-        text,
-        position
-      });
-      const formattedComment = {
-        ...apiComment,
-        timestamp: new Date(apiComment.timestamp)
-      };
-      setComments(prev => [...prev, formattedComment]);
-    } catch (error) {
-      console.error('Failed to add comment:', error);
-    }
-  };
-
-  const resolveComment = async (commentId: string) => {
-    try {
-      await apiClient.resolveComment(commentId);
-      setComments(prev => prev.map(comment => 
-        comment.id === commentId ? { ...comment, resolved: true } : comment
-      ));
-    } catch (error) {
-      console.error('Failed to resolve comment:', error);
-    }
-  };
-
-  const toggleStar = async (docId: string) => {
-    const doc = documents.find(d => d.id === docId);
-    if (!doc) return;
-    
-    try {
-      const updatedDoc = await apiClient.updateDocument(docId, { starred: !doc.starred });
-      const formattedDoc = {
-        ...updatedDoc,
-        lastModified: new Date(updatedDoc.last_modified)
-      };
-      setDocuments(prev => prev.map(d => 
-        d.id === docId ? formattedDoc : d
-      ));
-    } catch (error) {
-      console.error('Failed to toggle star:', error);
-    }
-  };
-
-  const duplicateDocument = async (doc: Document) => {
-    try {
-      const duplicatedDoc = await apiClient.duplicateDocument(doc.id);
-      const formattedDoc = {
-        ...duplicatedDoc,
-        lastModified: new Date(duplicatedDoc.last_modified)
-      };
-      setDocuments(prev => [...prev, formattedDoc]);
-    } catch (error) {
-      console.error('Failed to duplicate document:', error);
-    }
-  };
-
-  const createNewDocument = async () => {
-    try {
-      const newDoc = await apiClient.createDocument({
-        title: 'Untitled Document',
-        content: '',
-        tags: [],
-        language: 'en-US',
-        writing_goal: 'professional',
-        is_public: false,
-        shared: false,
-        starred: false
-      });
-      const formattedDoc = {
-        ...newDoc,
-        lastModified: new Date(newDoc.last_modified)
-      };
-      setDocuments(prev => [...prev, formattedDoc]);
-      setActiveDocument(formattedDoc);
-      setContent('');
-    } catch (error) {
-      console.error('Failed to create document:', error);
-    }
-  };
-
-  const exportDocument = (format: 'pdf' | 'docx' | 'txt' | 'md') => {
-    console.log(`Exporting document as ${format}`);
-  };
-
-  const startVoiceRecording = () => {
-    setVoiceRecording(true);
-    setTimeout(() => {
-      setVoiceRecording(false);
-      setContent(prev => prev + " This text was added via voice recording.");
-    }, 3000);
-  };
-
-  const toggleSpeechSynthesis = () => {
-    setSpeechSynthesis(!speechSynthesis);
-    if (!speechSynthesis && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(content);
-      window.speechSynthesis.speak(utterance);
-    } else if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
     }
   };
 
@@ -597,129 +404,76 @@ export default function GrammarlyClone() {
     }
   };
 
-  const filteredDocuments = Array.isArray(documents)
-    ? documents.filter(doc => 
-        doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        doc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    : [];
+  const filteredDocuments = documents.filter(doc => 
+    doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    doc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
-  if (!mounted) {
-    return null;
-  }
-
-  // Show login/register form if not authenticated
+  // Show authentication dialog if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-lg shadow-xl p-8">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <FileText className="w-8 h-8 text-white" />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex items-center justify-center space-x-2 mb-4">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-                WriteFlow Pro
-              </h1>
-              <p className="text-gray-600 mt-2">AI-powered writing assistant</p>
+              <span className="text-xl font-bold">WriteFlow Pro</span>
             </div>
-
-            {!showRegister ? (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={loginForm.email}
-                    onChange={(e) => setLoginForm(prev => ({ ...prev, email: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={loginForm.password}
-                    onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full">
-                  Sign In
-                </Button>
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => setShowRegister(true)}
-                    className="text-sm text-emerald-600 hover:text-emerald-700"
-                  >
-                    Don't have an account? Sign up
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleRegister} className="space-y-4">
+            <CardTitle>{authMode === 'login' ? 'Welcome Back' : 'Create Account'}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAuth} className="space-y-4">
+              {authMode === 'register' && (
                 <div>
                   <Label htmlFor="full_name">Full Name</Label>
                   <Input
                     id="full_name"
                     type="text"
-                    value={registerForm.full_name}
-                    onChange={(e) => setRegisterForm(prev => ({ ...prev, full_name: e.target.value }))}
+                    value={authForm.full_name}
+                    onChange={(e) => setAuthForm(prev => ({ ...prev, full_name: e.target.value }))}
                     required
                   />
                 </div>
-                <div>
-                  <Label htmlFor="reg_email">Email</Label>
-                  <Input
-                    id="reg_email"
-                    type="email"
-                    value={registerForm.email}
-                    onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="reg_password">Password</Label>
-                  <Input
-                    id="reg_password"
-                    type="password"
-                    value={registerForm.password}
-                    onChange={(e) => setRegisterForm(prev => ({ ...prev, password: e.target.value }))}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full">
-                  Sign Up
-                </Button>
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => setShowRegister(false)}
-                    className="text-sm text-emerald-600 hover:text-emerald-700"
-                  >
-                    Already have an account? Sign in
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <FileText className="w-8 h-8 text-white" />
-          </div>
-          <p className="text-muted-foreground">Loading WriteFlow Pro...</p>
-        </div>
+              )}
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={authForm.email}
+                  onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={authForm.password}
+                  onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full">
+                {authMode === 'login' ? 'Sign In' : 'Create Account'}
+              </Button>
+            </form>
+            <div className="mt-4 text-center">
+              <Button
+                variant="link"
+                onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+              >
+                {authMode === 'login' 
+                  ? "Don't have an account? Sign up" 
+                  : "Already have an account? Sign in"
+                }
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -732,36 +486,28 @@ export default function GrammarlyClone() {
           <div className="flex items-center justify-between px-6 py-3">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <FileText className="w-5 h-5 text-white" />
                 </div>
-                <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-                  WriteFlow Pro
-                </span>
+                <span className="text-xl font-bold">WriteFlow Pro</span>
               </div>
               <Separator orientation="vertical" className="h-6" />
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-muted-foreground">
-                  {user?.full_name}
+                  {activeDocument?.title || 'Untitled Document'}
                 </span>
-                <Separator orientation="vertical" className="h-4" />
-                <span className="text-sm text-muted-foreground">
-                  {activeDocument?.title || 'No document selected'}
-                </span>
-                {activeDocument && (
-                  <Badge variant="outline" className="text-xs">
-                    v{activeDocument.version}
-                  </Badge>
-                )}
+                <Badge variant="outline" className="text-xs">
+                  v{activeDocument?.version || 1}
+                </Badge>
                 {isAutoSaving && (
                   <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                     <span>Saving...</span>
                   </div>
                 )}
                 <div className="flex items-center space-x-1">
                   {isOnline ? (
-                    <Wifi className="w-4 h-4 text-emerald-500" />
+                    <Wifi className="w-4 h-4 text-green-500" />
                   ) : (
                     <WifiOff className="w-4 h-4 text-red-500" />
                   )}
@@ -773,6 +519,9 @@ export default function GrammarlyClone() {
             </div>
             
             <div className="flex items-center space-x-3">
+              <span className="text-sm text-muted-foreground">
+                Welcome, {user?.full_name}
+              </span>
               <Button variant="ghost" size="sm" onClick={() => setFocusMode(!focusMode)}>
                 <Focus className="w-4 h-4 mr-2" />
                 Focus
@@ -781,24 +530,15 @@ export default function GrammarlyClone() {
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
               </Button>
-              <Button variant="ghost" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
-              <Button variant="ghost" size="sm">
-                <Eye className="w-4 h-4 mr-2" />
-                Preview
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setDarkMode(!darkMode)}
               >
                 {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                Logout
               </Button>
             </div>
           </div>
@@ -842,9 +582,9 @@ export default function GrammarlyClone() {
                         {filteredDocuments.map((doc) => (
                           <div
                             key={doc.id}
-                            className={`p-3 rounded-lg cursor-pointer transition-all duration-200 group hover:shadow-md ${
+                            className={`p-3 rounded-lg cursor-pointer transition-colors group ${
                               activeDocument?.id === doc.id
-                                ? 'bg-emerald-50 border border-emerald-200 dark:bg-emerald-950 dark:border-emerald-800'
+                                ? 'bg-primary/10 border border-primary/20'
                                 : 'hover:bg-muted/50'
                             }`}
                             onClick={() => {
@@ -856,10 +596,10 @@ export default function GrammarlyClone() {
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-sm truncate">{doc.title}</div>
                                 <div className="text-xs text-muted-foreground mt-1">
-                                  {doc.wordCount} words • {doc.readingTime} min read
+                                  {doc.word_count} words • {doc.reading_time} min read
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {doc.lastModified.toLocaleDateString()}
+                                  {new Date(doc.last_modified).toLocaleDateString()}
                                 </div>
                                 {doc.tags.length > 0 && (
                                   <div className="flex flex-wrap gap-1 mt-2">
@@ -872,24 +612,10 @@ export default function GrammarlyClone() {
                                 )}
                               </div>
                               <div className="flex flex-col space-y-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleStar(doc.id);
-                                  }}
-                                >
+                                <Button variant="ghost" size="sm">
                                   <Star className={`w-3 h-3 ${doc.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    duplicateDocument(doc);
-                                  }}
-                                >
+                                <Button variant="ghost" size="sm">
                                   <Copy className="w-3 h-3" />
                                 </Button>
                               </div>
@@ -907,7 +633,7 @@ export default function GrammarlyClone() {
                           <div key={doc.id} className="p-3 rounded-lg border border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
                             <div className="font-medium text-sm">{doc.title}</div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              {doc.wordCount} words • {doc.lastModified.toLocaleDateString()}
+                              {doc.word_count} words • {new Date(doc.last_modified).toLocaleDateString()}
                             </div>
                           </div>
                         ))}
@@ -939,14 +665,6 @@ export default function GrammarlyClone() {
                     <Switch
                       checked={showSuggestions}
                       onCheckedChange={setShowSuggestions}
-                    />
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Comments</span>
-                    <Switch
-                      checked={showComments}
-                      onCheckedChange={setShowComments}
                     />
                   </div>
                   
@@ -1038,33 +756,9 @@ export default function GrammarlyClone() {
                   <Button variant="ghost" size="sm">
                     <Link className="w-4 h-4" />
                   </Button>
-                  <Separator orientation="vertical" className="h-6 mx-2" />
-                  <Button variant="ghost" size="sm">
-                    <RotateCcw className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <RotateCw className="w-4 h-4" />
-                  </Button>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={startVoiceRecording}
-                    className={voiceRecording ? 'text-red-500' : ''}
-                  >
-                    {voiceRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleSpeechSynthesis}
-                    className={speechSynthesis ? 'text-blue-500' : ''}
-                  >
-                    {speechSynthesis ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  </Button>
-                  <Separator orientation="vertical" className="h-6" />
                   <div className="flex items-center space-x-1">
                     <Button variant="ghost" size="sm" onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}>
                       <ZoomOut className="w-4 h-4" />
@@ -1089,12 +783,12 @@ export default function GrammarlyClone() {
             {/* Editor */}
             <div className="flex-1 p-8 bg-gradient-to-br from-background via-background to-muted/20">
               <div className="max-w-4xl mx-auto">
-                <div className="bg-card rounded-lg shadow-lg border border-border/50 min-h-[600px] p-8 transition-all duration-200 hover:shadow-xl">
+                <div className="bg-card rounded-lg shadow-lg border border-border/50 min-h-[600px] p-8">
                   <textarea
                     ref={editorRef}
                     value={content}
                     onChange={handleContentChange}
-                    className="w-full h-full min-h-[500px] resize-none border-none outline-none bg-transparent text-base leading-relaxed font-medium placeholder:text-muted-foreground/50"
+                    className="w-full h-full min-h-[500px] resize-none border-none outline-none bg-transparent text-base leading-relaxed font-medium"
                     placeholder="Start writing your document..."
                     style={{ fontSize: `${zoomLevel}%` }}
                   />
@@ -1132,9 +826,6 @@ export default function GrammarlyClone() {
                     {suggestions.length} suggestions
                   </Badge>
                   <Badge variant="outline" className="text-xs">
-                    {comments.filter(c => !c.resolved).length} comments
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
                     {writingGoal}
                   </Badge>
                   <Badge variant="outline" className="text-xs">
@@ -1150,16 +841,15 @@ export default function GrammarlyClone() {
             <div className="w-96 border-l border-border bg-card/30 backdrop-blur supports-[backdrop-filter]:bg-card/30">
               <div className="p-4">
                 <Tabs defaultValue="suggestions" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
+                  <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="suggestions">AI</TabsTrigger>
                     <TabsTrigger value="analytics">Analytics</TabsTrigger>
-                    <TabsTrigger value="comments">Comments</TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="suggestions" className="space-y-4 mt-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2 text-sm">
-                        <Sparkles className="w-4 h-4 text-emerald-500" />
+                        <Sparkles className="w-4 h-4 text-yellow-500" />
                         <span className="font-medium">AI Suggestions</span>
                       </div>
                       <Badge variant="secondary" className="text-xs">
@@ -1167,20 +857,10 @@ export default function GrammarlyClone() {
                       </Badge>
                     </div>
                     
-                    <div className="flex items-center space-x-2 mb-4">
-                      <Button variant="outline" size="sm" className="text-xs">
-                        <Filter className="w-3 h-3 mr-1" />
-                        All
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-xs">Grammar</Button>
-                      <Button variant="ghost" size="sm" className="text-xs">Style</Button>
-                      <Button variant="ghost" size="sm" className="text-xs">Clarity</Button>
-                    </div>
-                    
                     <ScrollArea className="h-[calc(100vh-300px)]">
                       <div className="space-y-3">
                         {suggestions.map((suggestion) => (
-                          <Card key={suggestion.id} className={`p-3 transition-all duration-200 hover:shadow-md ${getSuggestionColor(suggestion.type)}`}>
+                          <Card key={suggestion.id} className={`p-3 ${getSuggestionColor(suggestion.type)}`}>
                             <div className="flex items-start space-x-2">
                               <div className="flex-shrink-0 mt-1">
                                 {getSuggestionIcon(suggestion.type)}
@@ -1206,7 +886,7 @@ export default function GrammarlyClone() {
                                 <div className="text-sm text-muted-foreground mb-2">
                                   {suggestion.explanation}
                                 </div>
-                                <div className="text-sm font-medium text-emerald-600 mb-3">
+                                <div className="text-sm font-medium text-green-600 mb-3">
                                   Suggestion: "{suggestion.suggestion}"
                                 </div>
                                 <div className="flex space-x-2">
@@ -1225,19 +905,15 @@ export default function GrammarlyClone() {
                                   >
                                     Dismiss
                                   </Button>
-                                  <Button variant="ghost" size="sm" className="text-xs">
-                                    <Lightbulb className="w-3 h-3" />
-                                  </Button>
                                 </div>
                               </div>
                             </div>
                           </Card>
                         ))}
                         {suggestions.length === 0 && (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <CheckCircle className="w-12 h-12 mx-auto mb-3 text-emerald-500" />
-                            <p className="text-sm">No suggestions found!</p>
-                            <p className="text-xs">Your writing looks great.</p>
+                          <div className="text-center text-muted-foreground py-8">
+                            <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p>Start writing to get AI suggestions</p>
                           </div>
                         )}
                       </div>
@@ -1273,17 +949,6 @@ export default function GrammarlyClone() {
                           <span className="text-sm text-muted-foreground">92/100</span>
                         </div>
                         <Progress value={92} className="h-2" />
-                      </Card>
-
-                      <Card className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">Plagiarism Check</span>
-                          <span className="text-sm text-muted-foreground">{plagiarismScore}%</span>
-                        </div>
-                        <Progress value={plagiarismScore} className="h-2" />
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {plagiarismScore < 5 ? 'Original content' : 'Some similarities found'}
-                        </div>
                       </Card>
 
                       <Card className="p-4">
@@ -1331,96 +996,6 @@ export default function GrammarlyClone() {
                         </CardContent>
                       </Card>
                     </div>
-                  </TabsContent>
-
-                  <TabsContent value="comments" className="space-y-4 mt-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2 text-sm">
-                        <MessageSquare className="w-4 h-4 text-blue-500" />
-                        <span className="font-medium">Comments</span>
-                      </div>
-                      <Badge variant="secondary" className="text-xs">
-                        {comments.filter(c => !c.resolved).length} active
-                      </Badge>
-                    </div>
-                    
-                    <ScrollArea className="h-[calc(100vh-300px)]">
-                      <div className="space-y-3">
-                        {comments.map((comment) => (
-                          <Card key={comment.id} className={`p-3 transition-all duration-200 hover:shadow-md ${comment.resolved ? 'opacity-50' : ''}`}>
-                            <div className="flex items-start space-x-2">
-                              <div className="flex-shrink-0 mt-1">
-                                <MessageSquare className="w-4 h-4" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <span className="text-sm font-medium">{comment.author}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {new Date(comment.timestamp).toLocaleTimeString()}
-                                  </span>
-                                  {comment.resolved && (
-                                    <Badge variant="outline" className="text-xs">
-                                      Resolved
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="text-sm mb-3">
-                                  {comment.text}
-                                </div>
-                                {!comment.resolved && (
-                                  <div className="flex space-x-2">
-                                    <Button
-                                      size="sm"
-                                      onClick={() => resolveComment(comment.id)}
-                                      className="text-xs"
-                                    >
-                                      Resolve
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="text-xs">
-                                      Reply
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
-                        
-                        <Card className="p-3 border-dashed">
-                          <div className="space-y-2">
-                            <Textarea
-                              placeholder="Add a comment..."
-                              className="text-sm"
-                              rows={2}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault();
-                                  const text = e.currentTarget.value.trim();
-                                  if (text) {
-                                    addComment(text, { start: 0, end: 0 });
-                                    e.currentTarget.value = '';
-                                  }
-                                }
-                              }}
-                            />
-                            <Button 
-                              size="sm" 
-                              className="text-xs"
-                              onClick={(e) => {
-                                const textarea = e.currentTarget.parentElement?.querySelector('textarea');
-                                const text = textarea?.value.trim();
-                                if (text) {
-                                  addComment(text, { start: 0, end: 0 });
-                                  if (textarea) textarea.value = '';
-                                }
-                              }}
-                            >
-                              Add Comment
-                            </Button>
-                          </div>
-                        </Card>
-                      </div>
-                    </ScrollArea>
                   </TabsContent>
                 </Tabs>
               </div>
