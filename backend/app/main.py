@@ -1,61 +1,54 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-import logging
 
-from app.database import connect_to_mongo, close_mongo_connection
+from app.database import connect_to_mongo, close_mongo_connection, get_database
 from app.routers import auth, documents, suggestions, analytics, comments
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    logger.info("Starting up WriteFlow Pro API...")
-    await connect_to_mongo()
-    yield
-    # Shutdown
-    logger.info("Shutting down WriteFlow Pro API...")
-    await close_mongo_connection()
+import app.services.document_service as ds_module  # Used for assigning shared instance
+from app.services.document_service import DocumentService
 
 app = FastAPI(
     title="WriteFlow Pro API",
-    description="AI-powered writing assistant API with grammar checking, style suggestions, and real-time collaboration",
     version="1.0.0",
-    lifespan=lifespan
+    description="Backend for the AI-powered writing assistant 📝"
 )
 
-# Configure CORS
+# CORS settings — allow all origins for dev
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(auth.router, prefix="/api")
-app.include_router(documents.router, prefix="/api")
-app.include_router(suggestions.router, prefix="/api")
-app.include_router(analytics.router, prefix="/api")
-app.include_router(comments.router, prefix="/api")
+# --- App Startup Event ---
+@app.on_event("startup")
+async def startup_event():
+    await connect_to_mongo()
+    db = await get_database()
+    
+    # ✅ Shared DocumentService initialized for app-wide use
+    ds_module.document_service = DocumentService(db["documents"])
+    print("✅ document_service initialized")
 
+# --- App Shutdown Event ---
+@app.on_event("shutdown")
+async def shutdown_event():
+    await close_mongo_connection()
+
+# --- Register routers ---
+app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+app.include_router(documents.router, prefix="/api/auth/documents", tags=["documents"])
+app.include_router(suggestions.router, prefix="/api/ai", tags=["ai-suggestions"])
+app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
+app.include_router(comments.router, prefix="/api/comments", tags=["comments"])
+
+# --- Root Route ---
 @app.get("/")
 async def root():
-    return {
-        "message": "Welcome to WriteFlow Pro API",
-        "version": "1.0.0",
-        "docs": "/docs",
-        "redoc": "/redoc"
-    }
+    return {"message": "WriteFlow Pro API is running 📝"}
 
+# --- Health Check ---
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "WriteFlow Pro API"}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    return {"status": "ok"}

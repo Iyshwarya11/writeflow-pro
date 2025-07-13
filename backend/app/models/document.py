@@ -1,8 +1,13 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from datetime import datetime
 from bson import ObjectId
 from app.models.user import PyObjectId
+
+
+# ----------------------------
+# ✅ Base Schema
+# ----------------------------
 
 class DocumentBase(BaseModel):
     title: str
@@ -14,8 +19,14 @@ class DocumentBase(BaseModel):
     shared: bool = False
     starred: bool = False
 
+
+# ----------------------------
+# ✅ Document Create/Update DTOs
+# ----------------------------
+
 class DocumentCreate(DocumentBase):
     pass
+
 
 class DocumentUpdate(BaseModel):
     title: Optional[str] = None
@@ -26,6 +37,11 @@ class DocumentUpdate(BaseModel):
     is_public: Optional[bool] = None
     shared: Optional[bool] = None
     starred: Optional[bool] = None
+
+
+# ----------------------------
+# ✅ MongoDB Model (Internal DB Use)
+# ----------------------------
 
 class DocumentInDB(DocumentBase):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
@@ -38,9 +54,15 @@ class DocumentInDB(DocumentBase):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:
-        allow_population_by_field_name = True
+        validate_by_name = True
         arbitrary_types_allowed = True
         json_encoders = {ObjectId: str}
+        populate_by_name = True
+
+
+# ----------------------------
+# ✅ Final API Model (Frontend/Client Use)
+# ----------------------------
 
 class Document(DocumentBase):
     id: str
@@ -51,11 +73,16 @@ class Document(DocumentBase):
     collaborators: List[str]
     created_at: datetime
     updated_at: datetime
-    last_modified: datetime  # Alias for updated_at for frontend compatibility
+    last_modified: datetime  # alias for updated_at (frontend-friendly)
 
     @classmethod
     def from_db(cls, doc_in_db: DocumentInDB):
-        doc_dict = doc_in_db.dict()
-        doc_dict["id"] = str(doc_dict["id"])
+        doc_dict = doc_in_db.dict(by_alias=True)
+
+        # Remove internal _id to prevent validation error
+        if "_id" in doc_dict:
+            doc_dict["id"] = str(doc_dict.pop("_id"))
+
         doc_dict["last_modified"] = doc_dict["updated_at"]
+
         return cls(**doc_dict)

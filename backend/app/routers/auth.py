@@ -6,8 +6,10 @@ from app.models.user import User, UserCreate, Token
 from app.services.auth import create_access_token
 from app.services.user_service import user_service
 from app.dependencies import get_current_active_user
+from app.services.auth import create_access_token
+from app.models.user import UserCreate, Token, TokenData, User
 
-router = APIRouter(prefix="/auth", tags=["authentication"])
+router = APIRouter( tags=["authentication"])
 
 @router.post("/register", response_model=User)
 async def register(user: UserCreate):
@@ -20,7 +22,7 @@ async def register(user: UserCreate):
             detail=str(e)
         )
 
-@router.post("/login", response_model=Token)
+@router.post("/login/", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     """Login user and return access token"""
     user = await user_service.authenticate_user(form_data.username, form_data.password)

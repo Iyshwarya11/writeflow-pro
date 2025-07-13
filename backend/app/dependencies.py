@@ -9,7 +9,7 @@ security = HTTPBearer()
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
     """Get current authenticated user"""
     token_data = verify_token(credentials.credentials)
-    user = await user_service.get_user_by_email(token_data.email)
+    user = await user_service.get_user_by_email(token_data)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

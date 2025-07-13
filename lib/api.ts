@@ -172,39 +172,41 @@ class APIClient {
 
   // Document methods
   async getDocuments(): Promise<Document[]> {
-    return this.request<Document[]>('/documents/');
+    console.log('feriuub')
+    return this.request<Document[]>('/auth/documents/documents/');
   }
 
   async getDocument(id: string): Promise<Document> {
-    return this.request<Document>(`/documents/${id}`);
+    return this.request<Document>(`/auth/documents/documents/${id}`);
   }
 
   async createDocument(document: Partial<Document>): Promise<Document> {
-    return this.request<Document>('/documents/', {
+    return this.request<Document>('/auth/documents/documents/', {
       method: 'POST',
       body: JSON.stringify(document),
     });
   }
 
   async updateDocument(id: string, updates: Partial<Document>): Promise<Document> {
-    return this.request<Document>(`/documents/${id}`, {
-      method: 'PUT',
+    console.log('efhujwrbn', updates);
+    return this.request<Document>(`/auth/documents/documents/${id}`, {
+      method: 'GET',
       body: JSON.stringify(updates),
     });
   }
 
   async deleteDocument(id: string): Promise<void> {
-    await this.request(`/documents/${id}`, { method: 'DELETE' });
+    await this.request(`/auth/documents/documents/${id}`, { method: 'DELETE' });
   }
 
   async duplicateDocument(id: string): Promise<Document> {
-    return this.request<Document>(`/documents/${id}/duplicate`, {
+    return this.request<Document>(`/auth/documents/documents/${id}/duplicate`, {
       method: 'POST',
     });
   }
 
   async searchDocuments(query: string): Promise<Document[]> {
-    return this.request<Document[]>(`/documents/search?q=${encodeURIComponent(query)}`);
+    return this.request<Document[]>(`/auth/documents/documents/search?q=${encodeURIComponent(query)}`);
   }
 
   // AI Suggestions methods
@@ -214,7 +216,7 @@ class APIClient {
     writing_goal?: string;
     language?: string;
   }): Promise<Suggestion[]> {
-    return this.request<Suggestion[]>('/ai/suggestions', {
+    return this.request<Suggestion[]>('/ai/ai/suggestions', {
       method: 'POST',
       body: JSON.stringify(data),
     });

@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from app.models.suggestion import Suggestion, SuggestionUpdate, SuggestionInDB
 from app.models.user import User
 from app.services.ai_service import ai_service
-from app.services.document_service import document_service
+import app.services.document_service as ds_module
 from app.database import get_database
 from app.dependencies import get_current_active_user
 from bson import ObjectId
@@ -34,7 +34,7 @@ async def generate_suggestions(
 ):
     """Generate AI suggestions for a document"""
     # Verify document ownership
-    document = await document_service.get_document(request.document_id, current_user.id)
+    document = await ds_module.document_service.get_document(request.document_id, current_user.id)
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -89,7 +89,7 @@ async def get_document_suggestions(
 ):
     """Get all suggestions for a document"""
     # Verify document ownership
-    document = await document_service.get_document(document_id, current_user.id)
+    document = await ds_module.document_service.get_document(document_id)
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -119,7 +119,7 @@ async def apply_suggestion(
 ):
     """Apply a suggestion"""
     db = await get_database()
-    
+    print('inside this api')
     result = await db["suggestions"].update_one(
         {
             "_id": ObjectId(suggestion_id),
@@ -127,7 +127,7 @@ async def apply_suggestion(
         },
         {"$set": {"is_applied": True}}
     )
-    
+    # print('result = ',result)
     if result.modified_count == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

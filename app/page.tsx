@@ -529,6 +529,7 @@ export default function GrammarlyClone() {
 
   const createNewDocument = async () => {
     try {
+      console.log('erkejnioerni')
       const newDoc = await apiClient.createDocument({
         title: 'Untitled Document',
         content: '',
@@ -736,7 +737,7 @@ export default function GrammarlyClone() {
                   <FileText className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-                  WriteFlow Pro
+                  AI-writing assistant
                 </span>
               </div>
               <Separator orientation="vertical" className="h-6" />
@@ -856,7 +857,7 @@ export default function GrammarlyClone() {
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-sm truncate">{doc.title}</div>
                                 <div className="text-xs text-muted-foreground mt-1">
-                                  {doc.wordCount} words • {doc.readingTime} min read
+                                  {doc.word_count} words • {doc.reading_time} min read
                                 </div>
                                 <div className="text-xs text-muted-foreground">
                                   {doc.lastModified.toLocaleDateString()}
@@ -907,7 +908,7 @@ export default function GrammarlyClone() {
                           <div key={doc.id} className="p-3 rounded-lg border border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
                             <div className="font-medium text-sm">{doc.title}</div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              {doc.wordCount} words • {doc.lastModified.toLocaleDateString()}
+                              {doc.word_count} words • {doc.lastModified.toLocaleDateString()}
                             </div>
                           </div>
                         ))}
