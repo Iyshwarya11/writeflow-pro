@@ -33,15 +33,25 @@ async def generate_suggestions(
     current_user: User = Depends(get_current_active_user)
 ):
     """Generate AI suggestions for a document"""
-    # Verify document ownership
-    document = await ds_module.document_service.get_document(request.document_id, current_user.id)
-    if not document:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document not found"
-        )
+    # # Verify document ownership
+    # document = await ds_module.document_service.get_document(request.document_id, current_user.id)
+    # if not document:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_404_NOT_FOUND,
+    #         detail="Document not found"
+    #     )
     
     try:
+        # Verify document ownership if document exists
+        if request.document_id != "temp":
+            document = await document_service.get_document(request.document_id, current_user.id)
+            if not document:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Document not found"
+                )
+        
+        # Generate suggestions
         suggestions = await ai_service.generate_suggestions(
             content=request.content,
             document_id=request.document_id,
@@ -50,10 +60,9 @@ async def generate_suggestions(
             language=request.language
         )
         
-        # Store suggestions in database
-        db = await get_database()
-        if suggestions:
-            # Convert Suggestion objects to SuggestionInDB for storage
+        # Store suggestions in database (only for real documents)
+        if request.document_id != "temp" and suggestions:
+            db = await get_database()
             suggestion_docs = []
             for suggestion in suggestions:
                 suggestion_in_db = SuggestionInDB(

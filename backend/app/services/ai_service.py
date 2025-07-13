@@ -9,6 +9,13 @@ from app.models.analytics import ToneAnalysis, ReadabilityAnalysis, WritingStats
 from datetime import datetime
 import logging
 
+# Optional Groq import
+try:
+    from groq import Groq
+    GROQ_AVAILABLE = True
+except ImportError:
+    GROQ_AVAILABLE = False
+    logger.warning("Groq package not available. AI suggestions will use basic algorithms only.")
 logger = logging.getLogger(__name__)
 
 # ------------------------------
@@ -21,6 +28,22 @@ def ensure_nltk_data():
         except LookupError:
             nltk.download(pkg)
 
+# Download required NLTK data
+# try:
+#     nltk.data.find('tokenizers/punkt')
+# except LookupError:
+#     try:
+#         nltk.download('punkt')
+#     except Exception as e:
+#         logger.warning(f"Failed to download NLTK punkt: {e}")
+
+# try:
+#     nltk.data.find('corpora/stopwords')
+# except LookupError:
+#     try:
+#         nltk.download('stopwords')
+#     except Exception as e:
+#         logger.warning(f"Failed to download NLTK stopwords: {e}")
 
 # ------------------------------
 # AI Service Class
@@ -30,6 +53,7 @@ class AIService:
         ensure_nltk_data()
         self.groq_client = None
         if settings.groq_api_key and settings.groq_api_key.strip():
+        # if GROQ_AVAILABLE and settings.groq_api_key:
             try:
                 self.groq_client = Groq(api_key=settings.groq_api_key)
                 logger.info("Groq client initialized successfully")
@@ -51,6 +75,22 @@ class AIService:
         suggestions.extend(self._check_vocabulary(content, document_id, user_id))
 
         if self.groq_client:
+        
+        # Basic suggestions (always available)
+        # grammar_suggestions = self._check_grammar(content, document_id, user_id)
+        # suggestions.extend(grammar_suggestions)
+        
+        # style_suggestions = self._check_style(content, document_id, user_id, writing_goal)
+        # suggestions.extend(style_suggestions)
+        
+        # clarity_suggestions = self._check_clarity(content, document_id, user_id)
+        # suggestions.extend(clarity_suggestions)
+        
+        # vocab_suggestions = self._check_vocabulary(content, document_id, user_id)
+        # suggestions.extend(vocab_suggestions)
+        
+        # # Use Groq for advanced suggestions if available
+        # if self.groq_client and content.strip():
             try:
                 ai_suggestions = await self._get_groq_suggestions(content, document_id, user_id, writing_goal)
                 suggestions.extend(ai_suggestions)
@@ -88,6 +128,13 @@ class AIService:
         return suggestions
 
     def _check_style(self, content, document_id, user_id, writing_goal):
+    #             )
+    #             suggestions.append(suggestion)
+        
+    #     return suggestions[:5]  # Limit grammar suggestions
+    
+    # def _check_style(self, content: str, document_id: str, user_id: str, writing_goal: str) -> List[Suggestion]:
+    #     """Style checking based on writing goal"""
         suggestions = []
         passive_patterns = [r'\b(was|were|is|are|been|being)\s+\w+ed\b', r'\b(was|were|is|are|been|being)\s+\w+en\b']
         for pattern in passive_patterns:
@@ -110,6 +157,13 @@ class AIService:
         return suggestions[:5]
 
     def _check_clarity(self, content, document_id, user_id):
+    #             )
+    #             suggestions.append(suggestion)
+        
+    #     return suggestions[:3]  # Limit style suggestions
+    
+    # def _check_clarity(self, content: str, document_id: str, user_id: str) -> List[Suggestion]:
+    #     """Clarity checking"""
         suggestions = []
         sentences = nltk.sent_tokenize(content, language="english")
         for i, sentence in enumerate(sentences):
@@ -224,6 +278,172 @@ class AIService:
             created_at=datetime.utcnow()
         )
 
+#                 )
+#                 suggestions.append(suggestion)
+        
+#         return suggestions[:3]  # Limit vocabulary suggestions
+    
+#     async def _get_groq_suggestions(
+#         self, 
+#         content: str, 
+#         document_id: str, 
+#         user_id: str, 
+#         writing_goal: str
+#     ) -> List[Suggestion]:
+#         """Get advanced suggestions using Groq API"""
+#         if not self.groq_client:
+#             return []
+        
+#         try:
+#             # Limit content length for API efficiency
+#             content_preview = content[:1500] if len(content) > 1500 else content
+            
+#             prompt = f"""
+# You are an expert writing assistant. Analyze the following text for writing improvements based on the goal: {writing_goal}.
+
+# Provide specific, actionable suggestions in these categories:
+# 1. Grammar errors and corrections
+# 2. Style improvements for {writing_goal} writing
+# 3. Clarity and readability enhancements
+# 4. Tone adjustments
+# 5. Word choice and vocabulary improvements
+
+# Text to analyze:
+# "{content_preview}"
+
+# Format each suggestion as:
+# - Type: [grammar/style/clarity/tone/vocabulary]
+# - Issue: [specific text with issue]
+# - Suggestion: [specific improvement]
+# - Explanation: [why this improves the text]
+
+# Provide up to 3 most important suggestions.
+# """
+            
+#             response = self.groq_client.chat.completions.create(
+#                 messages=[{"role": "user", "content": prompt}],
+#                 model="llama3-8b-8192",
+#                 max_tokens=800,
+#                 temperature=0.2
+#             )
+            
+#             ai_text = response.choices[0].message.content
+            
+#             # Parse the AI response and create structured suggestions
+#             suggestions = self._parse_groq_response(ai_text, document_id, user_id, content)
+            
+#             return suggestions
+            
+#         except Exception as e:
+#             logger.error(f"Groq API error: {e}")
+#             return []
+    
+#     def _parse_groq_response(self, ai_text: str, document_id: str, user_id: str, content: str) -> List[Suggestion]:
+#         """Parse Groq response into structured suggestions"""
+#         suggestions = []
+        
+#         try:
+#             # Split response into individual suggestions
+#             lines = ai_text.split('\n')
+#             current_suggestion = {}
+            
+#             for line in lines:
+#                 line = line.strip()
+#                 if line.startswith('- Type:'):
+#                     if current_suggestion and len(current_suggestion) >= 4:
+#                         # Process previous suggestion
+#                         suggestion = self._create_suggestion_from_parsed(
+#                             current_suggestion, document_id, user_id, content
+#                         )
+#                         if suggestion:
+#                             suggestions.append(suggestion)
+                    
+#                     current_suggestion = {'type': line.replace('- Type:', '').strip().lower()}
+#                 elif line.startswith('- Issue:'):
+#                     current_suggestion['issue'] = line.replace('- Issue:', '').strip()
+#                 elif line.startswith('- Suggestion:'):
+#                     current_suggestion['suggestion'] = line.replace('- Suggestion:', '').strip()
+#                 elif line.startswith('- Explanation:'):
+#                     current_suggestion['explanation'] = line.replace('- Explanation:', '').strip()
+            
+#             # Process last suggestion
+#             if current_suggestion and len(current_suggestion) >= 4:
+#                 suggestion = self._create_suggestion_from_parsed(
+#                     current_suggestion, document_id, user_id, content
+#                 )
+#                 if suggestion:
+#                     suggestions.append(suggestion)
+                    
+#         except Exception as e:
+#             logger.error(f"Error parsing Groq response: {e}")
+#             # Fallback: create a general suggestion
+#             suggestion = Suggestion(
+#                 id=f"ai_general_{hash(content[:100])}",
+#                 document_id=document_id,
+#                 user_id=user_id,
+#                 type="style",
+#                 text=content[:100] + "..." if len(content) > 100 else content,
+#                 suggestion="AI-powered improvement available",
+#                 explanation=ai_text[:200] + "..." if len(ai_text) > 200 else ai_text,
+#                 position=SuggestionPosition(start=0, end=min(100, len(content))),
+#                 severity="info",
+#                 confidence=85.0,
+#                 is_applied=False,
+#                 is_dismissed=False,
+#                 created_at=datetime.utcnow()
+#             )
+#             suggestions.append(suggestion)
+        
+#         return suggestions
+    
+#     def _create_suggestion_from_parsed(self, parsed: dict, document_id: str, user_id: str, content: str) -> Optional[Suggestion]:
+#         """Create a Suggestion object from parsed data"""
+#         try:
+#             if not all(key in parsed for key in ['type', 'issue', 'suggestion', 'explanation']):
+#                 return None
+            
+#             # Find position of the issue in content
+#             issue_text = parsed['issue'].strip('"[]')
+#             start_pos = content.lower().find(issue_text.lower())
+            
+#             if start_pos == -1:
+#                 # If exact match not found, use beginning of content
+#                 start_pos = 0
+#                 end_pos = min(50, len(content))
+#             else:
+#                 end_pos = start_pos + len(issue_text)
+            
+#             # Determine severity based on type
+#             severity_map = {
+#                 'grammar': 'error',
+#                 'style': 'warning',
+#                 'clarity': 'info',
+#                 'tone': 'info',
+#                 'vocabulary': 'info'
+#             }
+            
+#             suggestion = Suggestion(
+#                 id=f"groq_{parsed['type']}_{start_pos}_{hash(parsed['issue'])}",
+#                 document_id=document_id,
+#                 user_id=user_id,
+#                 type=parsed['type'] if parsed['type'] in ['grammar', 'style', 'clarity', 'tone', 'vocabulary'] else 'style',
+#                 text=issue_text,
+#                 suggestion=parsed['suggestion'],
+#                 explanation=parsed['explanation'],
+#                 position=SuggestionPosition(start=start_pos, end=end_pos),
+#                 severity=severity_map.get(parsed['type'], 'info'),
+#                 confidence=90.0,  # High confidence for AI suggestions
+#                 is_applied=False,
+#                 is_dismissed=False,
+#                 created_at=datetime.utcnow()
+#             )
+            
+#             return suggestion
+            
+#         except Exception as e:
+#             logger.error(f"Error creating suggestion from parsed data: {e}")
+#             return None
+    
     def analyze_tone(self, content: str) -> ToneAnalysis:
         formal_words = ['therefore', 'furthermore', 'consequently', 'moreover']
         confident_words = ['will', 'definitely', 'certainly']

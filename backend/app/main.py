@@ -5,6 +5,21 @@ from app.database import connect_to_mongo, close_mongo_connection, get_database
 from app.routers import auth, documents, suggestions, analytics, comments
 import app.services.document_service as ds_module  # Used for assigning shared instance
 from app.services.document_service import DocumentService
+from app.config import settings
+
+# # Configure logging
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger(__name__)
+
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     # Startup
+#     logger.info("Starting up WriteFlow Pro API...")
+#     await connect_to_mongo()
+#     yield
+#     # Shutdown
+#     logger.info("Shutting down WriteFlow Pro API...")
+#     await close_mongo_connection()
 
 app = FastAPI(
     title="WriteFlow Pro API",
@@ -16,6 +31,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    # allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

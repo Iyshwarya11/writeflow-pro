@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 // Types
 export interface LoginRequest {
@@ -114,7 +114,12 @@ class APIClient {
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { detail: `HTTP ${response.status}: ${response.statusText}` };
+        }
         throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
       }
 
@@ -322,6 +327,18 @@ class APIClient {
   }
 }
 
-// Export singleton instance
-export const apiClient = new APIClient(API_BASE_URL);
-export default apiClient;
+// Singleton instance
+let apiClientInstance: APIClient | null = null;
+
+// Export function to get singleton instance
+export function getApiClientInstance(): APIClient {
+  if (!apiClientInstance && typeof window !== 'undefined') {
+    apiClientInstance = new APIClient(API_BASE_URL);
+  }
+  
+  if (!apiClientInstance) {
+    throw new Error('API client can only be used in browser environment');
+  }
+  
+  return apiClientInstance;
+}
