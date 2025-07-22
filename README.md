@@ -1,244 +1,208 @@
-# WriteFlow Pro - AI-Powered Writing Assistant
+# Grammarly Clone - Advanced Writing Assistant
 
-A comprehensive document editor with AI-powered writing assistance, real-time collaboration, and advanced analytics.
+A comprehensive writing assistant built with Next.js, FastAPI, and modern AI technologies. This application provides real-time grammar checking, writing suggestions, plagiarism detection, and writing analytics.
 
 ## Features
 
-### 🤖 AI-Powered Writing Assistance
-- **Grammar & Style Checking**: Real-time grammar corrections and style improvements
-- **Tone Analysis**: Analyze and adjust writing tone for different audiences
-- **Readability Scoring**: Get readability metrics and suggestions for improvement
-- **Vocabulary Enhancement**: AI-powered vocabulary suggestions and improvements
-- **Plagiarism Detection**: Basic plagiarism checking capabilities
-
-### 📝 Advanced Document Management
-- **Rich Text Editor**: Full-featured editor with formatting tools
-- **Auto-Save**: Automatic document saving with version control
-- **Document Organization**: Tags, folders, and search functionality
-- **Collaboration**: Real-time document sharing and collaboration
-- **Export Options**: Multiple export formats (PDF, Word, etc.)
-
-### 📊 Writing Analytics
-- **Writing Statistics**: Word count, reading time, grade level analysis
-- **Progress Tracking**: Writing goals and productivity metrics
-- **Performance Insights**: Detailed analytics on writing patterns
-- **Improvement Suggestions**: Personalized recommendations for better writing
-
-### 🎨 Modern User Experience
-- **Dark/Light Mode**: Customizable theme preferences
-- **Focus Mode**: Distraction-free writing environment
+### Frontend (Next.js + Tailwind + shadcn/ui)
+- **Real-time Editor**: Advanced text editor with live grammar checking
+- **Smart Suggestions**: AI-powered writing suggestions with explanations
+- **Writing Analytics**: Comprehensive insights and performance tracking
+- **Plagiarism Checker**: Content originality verification
 - **Responsive Design**: Works seamlessly on desktop and mobile
-- **Keyboard Shortcuts**: Efficient workflow with keyboard shortcuts
-- **Voice Input**: Speech-to-text functionality
+- **Modern UI**: Clean, professional interface with smooth animations
+
+### Backend (FastAPI + MongoDB)
+- **AI-Powered Suggestions**: Using Groq API and Hugging Face models
+- **Grammar Checking**: Advanced grammar and style analysis
+- **Plagiarism Detection**: Multi-source plagiarism checking
+- **Document Management**: Full CRUD operations for documents
+- **User Analytics**: Writing statistics and trends
+- **RESTful API**: Well-documented API endpoints
 
 ## Tech Stack
 
 ### Frontend
-- **Next.js 13+** - React framework with App Router
-- **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first CSS framework
-- **shadcn/ui** - Modern UI component library
-- **Lucide React** - Beautiful icons
+- **Next.js 13**: React framework with App Router
+- **Tailwind CSS**: Utility-first CSS framework
+- **shadcn/ui**: Modern component library
+- **Lucide React**: Beautiful icons
+- **TypeScript**: Type-safe development
 
 ### Backend
-- **FastAPI** - Modern Python web framework
-- **MongoDB** - Document database with Motor async driver
-- **JWT Authentication** - Secure user authentication
-- **Groq API** - AI-powered language processing
-- **NLTK & TextStat** - Text analysis and processing
+- **FastAPI**: Modern Python web framework
+- **MongoDB**: NoSQL database for document storage
+- **Groq API**: Fast AI inference
+- **Hugging Face**: Pre-trained AI models
+- **Motor**: Async MongoDB driver
 
-## Quick Start
+## Installation & Setup
 
 ### Prerequisites
 - Node.js 18+ and npm
 - Python 3.8+
-- MongoDB (local or cloud)
-- Groq API key (optional, for enhanced AI features)
+- MongoDB
+- Groq API key
+- Hugging Face API key (optional)
 
-### Installation
+### Frontend Setup
+```bash
+# Install dependencies
+npm install
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd writeflow-pro
-   ```
-
-2. **Install frontend dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Install backend dependencies**
-   ```bash
-   npm run install:backend
-   ```
-
-4. **Set up environment variables**
-   
-   Frontend (.env.local):
-   ```env
-   NEXT_PUBLIC_API_URL=http://localhost:8000/api
-   ```
-   
-   Backend (backend/.env):
-   ```env
-   MONGODB_URL=mongodb://localhost:27017
-   DATABASE_NAME=writeflow_pro
-   SECRET_KEY=your-secret-key-change-this-in-production
-   GROQ_API_KEY=your-groq-api-key-here
-   ```
-
-5. **Start the development servers**
-   ```bash
-   # Start both frontend and backend
-   npm run dev:full
-   
-   # Or start them separately
-   npm run dev          # Frontend only
-   npm run backend      # Backend only
-   ```
-
-6. **Open your browser**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8000
-   - API Documentation: http://localhost:8000/docs
-
-## Development
-
-### Project Structure
-```
-writeflow-pro/
-├── app/                    # Next.js app directory
-│   ├── globals.css        # Global styles
-│   ├── layout.tsx         # Root layout
-│   ├── page.tsx          # Main application
-│   └── not-found.tsx     # 404 page
-├── components/            # React components
-│   └── ui/               # shadcn/ui components
-├── lib/                  # Utility libraries
-│   ├── api.ts           # API client
-│   └── utils.ts         # Helper functions
-├── backend/              # FastAPI backend
-│   ├── app/             # Application code
-│   │   ├── models/      # Pydantic models
-│   │   ├── routers/     # API routes
-│   │   ├── services/    # Business logic
-│   │   └── main.py      # FastAPI app
-│   ├── requirements.txt # Python dependencies
-│   └── run.py          # Server runner
-└── README.md
+# Start development server
+npm run dev
 ```
 
-### API Endpoints
+### Backend Setup
+```bash
+# Navigate to API directory
+cd api
 
-#### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `GET /api/auth/me` - Get current user
-- `POST /api/auth/logout` - User logout
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-#### Documents
-- `GET /api/documents/` - List documents
-- `POST /api/documents/` - Create document
+# Install dependencies
+pip install -r requirements.txt
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your API keys and MongoDB URI
+
+# Start the server
+python main.py
+```
+
+### Database Setup
+```bash
+# Start MongoDB (if running locally)
+mongod
+
+# The application will automatically create indexes and collections
+```
+
+## Environment Variables
+
+Create a `.env` file in the `api` directory:
+
+```env
+GROQ_API_KEY=your_groq_api_key_here
+MONGODB_URI=mongodb://localhost:27017/grammarly_clone
+HUGGINGFACE_API_KEY=your_huggingface_api_key_here
+CORS_ORIGINS=http://localhost:3000
+DEBUG=True
+```
+
+## API Endpoints
+
+### Documents
+- `POST /api/documents` - Create document
 - `GET /api/documents/{id}` - Get document
 - `PUT /api/documents/{id}` - Update document
 - `DELETE /api/documents/{id}` - Delete document
+- `GET /api/users/{user_id}/documents` - Get user documents
 
-#### AI Features
-- `POST /api/ai/suggestions` - Generate AI suggestions
-- `POST /api/ai/tone-analysis` - Analyze text tone
-- `POST /api/ai/plagiarism-check` - Check plagiarism
-- `GET /api/analytics/document/{id}` - Document analytics
+### Suggestions
+- `POST /api/suggestions` - Get writing suggestions
+- `GET /api/suggestions/{document_id}` - Get cached suggestions
 
-### Environment Variables
+### Plagiarism
+- `POST /api/plagiarism/check` - Check for plagiarism
+- `GET /api/plagiarism/{document_id}` - Get plagiarism results
 
-#### Frontend
-- `NEXT_PUBLIC_API_URL` - Backend API URL
+### Analytics
+- `GET /api/users/{user_id}/statistics` - Get writing statistics
+- `GET /api/users/{user_id}/trends` - Get writing trends
 
-#### Backend
-- `MONGODB_URL` - MongoDB connection string
-- `DATABASE_NAME` - Database name
-- `SECRET_KEY` - JWT secret key
-- `GROQ_API_KEY` - Groq API key for enhanced AI features
-- `CORS_ORIGINS` - Allowed CORS origins
+## Features in Detail
+
+### Real-time Grammar Checking
+- Uses Hugging Face CoLA model for grammar validation
+- Highlights errors with explanations
+- Provides suggestions for improvements
+
+### AI-Powered Suggestions
+- Groq API integration for intelligent suggestions
+- Context-aware improvements
+- Writing goal optimization (clarity, engagement, tone)
+
+### Plagiarism Detection
+- Multi-source checking (web, academic, publications)
+- Similarity scoring
+- Source attribution and links
+
+### Writing Analytics
+- Word count and reading time
+- Writing quality scores
+- Progress tracking
+- Performance insights
+
+## Development
+
+### Frontend Development
+```bash
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
+
+### Backend Development
+```bash
+# Start with auto-reload
+python main.py
+
+# Run tests (if implemented)
+pytest
+
+# Format code
+black .
+```
 
 ## Deployment
 
 ### Frontend (Vercel/Netlify)
-1. Build the project: `npm run build`
-2. Deploy the `out` directory (static export)
-3. Set environment variables in deployment platform
+```bash
+# Build the project
+npm run build
 
-### Backend (Railway/Heroku/DigitalOcean)
-1. Set up MongoDB database
-2. Configure environment variables
-3. Deploy using Docker or direct Python deployment
+# Deploy to Vercel
+vercel deploy
 
-### Docker Deployment
-```dockerfile
-# Frontend Dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["npm", "start"]
-
-# Backend Dockerfile
-FROM python:3.9-slim
-WORKDIR /app
-COPY backend/requirements.txt .
-RUN pip install -r requirements.txt
-COPY backend/ .
-EXPOSE 8000
-CMD ["python", "run.py"]
+# Or deploy to Netlify
+netlify deploy --prod
 ```
 
-## Features in Detail
-
-### AI Writing Assistant
-- **Real-time Suggestions**: Get grammar, style, and clarity suggestions as you type
-- **Context-Aware**: Suggestions adapt to your writing goal (professional, academic, creative, etc.)
-- **Multiple Languages**: Support for multiple languages and locales
-- **Confidence Scoring**: Each suggestion includes a confidence score
-
-### Document Management
-- **Version Control**: Track document versions and changes
-- **Collaboration**: Share documents with team members
-- **Organization**: Use tags and folders to organize documents
-- **Search**: Full-text search across all documents
-
-### Analytics Dashboard
-- **Writing Metrics**: Track words written, time spent, and productivity
-- **Readability Analysis**: Flesch-Kincaid, SMOG, and other readability scores
-- **Tone Analysis**: Understand the emotional tone of your writing
-- **Progress Tracking**: Set and track writing goals
+### Backend (Railway/Heroku)
+```bash
+# Create Dockerfile for containerization
+# Push to your preferred cloud platform
+```
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## Acknowledgments
+
+- Groq for fast AI inference
+- Hugging Face for pre-trained models
+- shadcn/ui for beautiful components
+- The open-source community for amazing tools
+
 ## Support
 
-For support, email support@writeflowpro.com or join our Discord community.
-
-## Roadmap
-
-- [ ] Real-time collaborative editing
-- [ ] Advanced plagiarism detection
-- [ ] Integration with Google Docs/Word
-- [ ] Mobile app development
-- [ ] Advanced AI models integration
-- [ ] Team workspace features
-- [ ] Advanced export options
-- [ ] Plugin system for extensions
+For support, email support@example.com or join our Discord community.
